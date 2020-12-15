@@ -7,21 +7,20 @@ ADMIE offers an [official API](https://www.admie.gr/en/market/market-statistics/
 
 ## Usage
 
-The wrapper is called from any shell with minor dependancies that are covered by Anaconda distribution. 
-
-Here is an example of executing the wrapper:
-
-```
-$ python AdmieDataCollector.py  -s 2020-11-10 -e 2020-11-20 -t ISP1DayAheadLoadForecast -d . 
-```
-
-The line above will download all the files of type `ISP1DayAheadLoadForecast` for dates starting from `2020-11-10` to `2020-11-20` and save them to the current directory.
+The wrapper is called from any shell with minor dependancies that are covered by the Anaconda distribution. 
 
 The following can be passed as arguments to the wrapper:
+* -f | --file: input file for executing batch API queries. The file should be CSV file with have the following format:
+```         
+startDate1,endDate1,filetype1
+startDate2,endDate2,filetype2
+...
+startDateN,endDateN,filetypeN`
+```
+* -d | --destDir: destination directory, where the files will be stored
 * -s | --startDate: starting date for the query with format YYYY-MM-DD
 * -e | --endDate: ending date for the query with format YYYY-MM-DD
-* -d | --destDir: destination directory, where the files will be stored
-* -t | --type: according to the ADMIE API the available file types are the following with the addition of `info` that is used for display purposes:
+* -t | --type: according to the ADMIE API the available file types are the following with the addition of `"info"` that can be used for display purposes:
 
 ```['AdhocISPResults', 'CurrentLineOutages', 'CurrentProtectionOutages', 
 'CurrentSubstationOutages', 'DailyAuctionsSpecificationsATC', 'DailyEnergyBalanceAnalysis', 
@@ -43,9 +42,35 @@ The following can be passed as arguments to the wrapper:
 'YearlyWaterUsageDeclaration']
 ```
 
-The `info` value is the only acceptable file type value for the `--type` argument, outside of the ADMIE API, and is used to display information for each acceptable file type value. For instance:
+
+
+## Examples
+
+Following are  some examples:
 
 ```
+$ python AdmieDataCollector.py  -s 2020-11-10 -e 2020-11-20 -t ISP1DayAheadLoadForecast -d . 
+```
+
+The line above will download all the files of type `ISP1DayAheadLoadForecast` for dates starting from `2020-11-10` to `2020-11-20` and save them to the current directory.
+
+Alternatively, a file with multiple dates and file types can be provided for batch downloading:
+
+Input file: `sample.csv`
+```
+2020-11-01,2020-11-03,UnitsMaintenanceSchedule
+2020-11-05,2020-11-10,UnitsMaintenanceSchedule
+2020-11-11,2020-11-13,UnitsMaintenanceSchedule
+```
+```
+$ python AdmieDataCollector.py  -f sample.csv -d tempDir 
+```
+The line above will download all the files of type `UnitsMaintenanceSchedule` for the specified dates and save them to the `tempDir` directory.
+
+The `info` value can be pass to the file type (-t|--type) argument and is the only acceptable file type value outside of the ADMIE API, and is used to display information for all acceptable file types.
+
+```
+
 $ python AdmieDataCollector.py -t info
 
 Available file types:
@@ -90,6 +115,8 @@ Available file types:
             - description: 2 φορές την ημέρα και όποτε άλλοτε χρειαστεί Πρόβλεψη Φορτίου / Twice a day and on demand Load Forecast
             - when: 09:00 και 11:00
 ```
+
+
 ---
 
 ## TODO

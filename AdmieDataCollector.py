@@ -1,5 +1,6 @@
 import os
 import json
+import csv
 import time
 import requests
 import argparse
@@ -7,6 +8,7 @@ import datetime
 from tqdm import tqdm
 
 class AdmieDataCollector():
+
    def __init__(self):
       # API query variables
       self.baseQueryURL = 'https://www.admie.gr/getOperationMarketFilewRange'
@@ -35,8 +37,14 @@ class AdmieDataCollector():
       self.parser = argparse.ArgumentParser(description='Wraps the ADMIE data collection API', prog='ADMIE API Wrapper')
       self.parser.add_argument('-s','--startDate', type=datetype, help='''Select start date for the query, date format: YYYY-MM-DD''')
       self.parser.add_argument('-e','--endDate', type=datetype, help='''Select end date for the query, date format: YYYY-MM-DD''')
-      self.parser.add_argument('-d','--destDir', help='''Select directory to save the data''', default='.')      
-      self.parser.add_argument('-t','--type', help='''Select file type from the available file types according to the ADMIE API:''', required=True, 
+      self.parser.add_argument('-d','--destDir', help='''Select directory to save the data''', required=True)      
+      self.parser.add_argument('-f','--file', help='''Select a file as input for executing batch API queries. The file should be CSV file with have the following format:
+         startDate1,endDate1,filetype1
+         startDate2,endDate2,filetype2
+         ...
+         startDateN,endDateN,filetypeN
+         ''')      
+      self.parser.add_argument('-t','--type', help='''Select file type from the available file types according to the ADMIE API:''', 
             choices=self.all_filetypes + ['info'])
 
       self.parser.add_argument('--version', action='version', version='%(prog)s  1.0')
@@ -44,28 +52,80 @@ class AdmieDataCollector():
       # Apply argument constrains
       self.checkArgConstrains()
    
+
+   # Executes the API queries
+   def run(self,): 
+      if self.args.file and os.path.isfile(self.args.file):
+         self.executeBatchQuery()
+      else:
+         self.executeQuery()
+
+
    # Query process
-   def executeQuery(self,):
-      params = {'dateStart': self.args.startDate,
-                'dateEnd': self.args.endDate,
-                'FileCategory': self.args.type}
-      
+   def executeQuery(self, params={}):      
+      if not params:
+         params = {'dateStart': self.args.startDate,
+                   'dateEnd': self.args.endDate,
+                   'FileCategory': self.args.type}
+
       if 'info' in params['FileCategory']:
          self.showAllFileTypes()
       else:
+         self.checkApiParams(params)
          req = requests.get(self.baseQueryURL, params=params)
          self.downloadFiles(req)      
       
+
+   # Batch query process
+   def executeBatchQuery(self,):
+      with open(self.args.file, 'r') as csv_file:
+         csv_reader = csv.reader(csv_file, delimiter=',')
+         for i,row in enumerate(csv_reader, start=1):
+            try:
+               params = {'dateStart': row[0],
+                         'dateEnd': row[1],
+                         'FileCategory': row[2]}
+               self.executeQuery(params=params)
+            except:
+               self.parser.error('\nATTENTION: Error in CSV file format in line %s' % i)
+
+
+   # Check query parameters constrains      
+   def checkApiParams(self, params):
+      datetype(params['dateStart'])
+      datetype(params['dateEnd'])
+      if params['FileCategory'] not in self.all_filetypes:
+         raise Exception()
+
+
    # Check argument constrains      
    def checkArgConstrains(self,):
+      if self.args.file:         
+         self.checkConfigFileConstains()
+
       if self.args.startDate or self.args.endDate:
-         if self.args.startDate and not self.args.endDate:
-            self.parser.error('\nATTENTION: -e/--endDate is required when -s/--startDate is set.')
-         if self.args.endDate and not self.args.startDate:
-            self.parser.error('\nATTENTION: -s/--startDate is required when -e/--endDate is set.')
-         if self.args.endDate < self.args.startDate:
-            self.parser.error('\nATTENTION: Start date cannot be after end date')
-            
+         self.checkDateConstains()
+
+      if list(self.args.__dict__.values()) == [None, None, None, None, None]:
+         self.parser.error('\nATTENTION: No arguments were selected')
+
+   # Check date argument constrains
+   def checkDateConstains(self,):
+      if self.args.startDate and not self.args.endDate:
+         self.parser.error('\nATTENTION: -e/--endDate is required when -s/--startDate is set.')
+      if self.args.endDate and not self.args.startDate:
+         self.parser.error('\nATTENTION: -s/--startDate is required when -e/--endDate is set.')
+      if self.args.endDate < self.args.startDate:
+         self.parser.error('\nATTENTION: Start date cannot be after end date')
+
+
+   # Check input file argument constrains
+   def checkConfigFileConstains(self,):
+      if self.args.startDate or self.args.endDate or self.args.type:
+            self.parser.error('\nATTENTION: Only destination (-d|--destDir) argument is needed with input file (-f|--file) argument')
+      if not os.path.isfile(self.args.file):
+         self.parser.error('\nATTENTION: File does not exist')
+         
 
    # Display all file types and available information
    def showAllFileTypes(self,):
@@ -91,6 +151,7 @@ class AdmieDataCollector():
                 publication_frequencyGR, data_typeGR,
                 publication_frequencyEN, data_typeEN,
                 time_gate))
+
 
    # Download query results   
    def downloadFiles(self, req):
@@ -131,8 +192,8 @@ class AdmieDataCollector():
 
             except Exception as e:
                print('Error in request: %s' % str(e))
-
       print("--- Finished in %s seconds ---" % round(time.time() - start_time, 2))
+
 
 # Handle date type arguments
 def datetype(dateString):
@@ -142,6 +203,7 @@ def datetype(dateString):
       print('Error for value %s. -s/--startDate and -e/--endDate arguments have to follow the format YYYY-MM-DD' % dateString)
    return date
 
+
 if __name__ == "__main__":
    admie = AdmieDataCollector()
-   admie.executeQuery()
+   admie.run()
