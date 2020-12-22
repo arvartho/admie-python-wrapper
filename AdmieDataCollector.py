@@ -37,7 +37,7 @@ class AdmieDataCollector():
       self.parser = argparse.ArgumentParser(description='Wraps the ADMIE data collection API', prog='ADMIE API Wrapper')
       self.parser.add_argument('-s','--startDate', type=datetype, help='''Select start date for the query, date format: YYYY-MM-DD''')
       self.parser.add_argument('-e','--endDate', type=datetype, help='''Select end date for the query, date format: YYYY-MM-DD''')
-      self.parser.add_argument('-d','--destDir', help='''Select directory to save the data''', required=True)      
+      self.parser.add_argument('-d','--destDir', help='''Select directory to save the data''')      
       self.parser.add_argument('-f','--file', help='''Select a file as input for executing batch API queries. The file should be CSV file with have the following format:
          startDate1,endDate1,filetype1
          startDate2,endDate2,filetype2
@@ -180,7 +180,7 @@ class AdmieDataCollector():
                filepath = os.path.join(destDir, filename)
                
                # initiate file request
-               processBar.set_description("  Downloading file: %s, %s" % (filename, description))
+               processBar.set_description("  Downloading file: %s" % filename)
                req = requests.get(url, allow_redirects=True)
 
                # save file locally
